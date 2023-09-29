@@ -1,11 +1,12 @@
+const fs = require("fs");
+const jwt = require("jsonwebtoken");
+
 const { BotTheme, BotSetting, Model, Visible, } = require("../models/SettingModel");
 
 const { ChatbotHistory } = require("../models/ChatbotHistoryModel");
 const resMsg = require("../helpers/responseMessage");
 const embedding = require("../helpers/utility");
 const { ObjectId } = require("mongodb");
-const { Types } = require("mongoose");
-const { INTEGER } = require("sequelize");
 const { PDFLoader } = require("langchain/document_loaders/fs/pdf");
 const { TokenTextSplitter } = require("langchain/text_splitter");
 const { PineconeClient } = require("@pinecone-database/pinecone");
@@ -13,10 +14,7 @@ const { PineconeStore } = require("langchain/vectorstores/pinecone");
 const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
 const { PuppeteerWebBaseLoader, } = require("langchain/document_loaders/web/puppeteer");
 const { decode } = require("jsonwebtoken");
-const fs = require("fs");
-const jwt = require("jsonwebtoken");
 const PDFParser = require("pdf-parse");
-const util = require("util");
 const puppeteer = require("puppeteer");
 
 const { SUCCESS, SERVERERROR, NOTFOUND, EMAILORPASSWORDINVAID, EXIST, } = require("../constants/errorCode");
@@ -33,10 +31,9 @@ var all_resultURLs = [];
 exports.create = async (req, res) => {
   try {
     let { chatbot_name, embedding_type = 0, content, chatbot_id, is_create = true, } = req.body;
-
     let nonexistFlag = false;
     let response = "success";
-    let chatbotId = "";
+
     //*********embedding***********
 
     if (embedding_type == 0 && req.files.file != null) {
@@ -147,6 +144,7 @@ exports.create = async (req, res) => {
           splitPages: false,
           pdfjs: () => import("pdf-parse/lib/pdf.js/v1.9.426/build/pdf.js"),
         });
+
         const docs = await loader.load();
 
         fs.unlink("controllers/" + filename.toString(), (err) => {
@@ -154,10 +152,12 @@ exports.create = async (req, res) => {
             throw err;
           }
         });
+
         const splitter = new TokenTextSplitter({
           chunkSize: 1000,
           chunkOverlap: 0,
         });
+
         const output = await splitter.createDocuments([docs[0].pageContent]);
         numberCharacters = docs[0].pageContent.length;
 
@@ -168,27 +168,21 @@ exports.create = async (req, res) => {
           apiKey: process.env.PINECONE_API_KEY,
           environment: process.env.PINECONE_ENVIRONMENT,
         });
+
         const pineconeIndex = client.Index(process.env.PINECONE_INDEX);
 
         await PineconeStore.fromDocuments(output, new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }), { pineconeIndex, namespace: result._id });
-
 
         BotSetting.findByIdAndUpdate(
           result._id,
           { characters_number: numberCharacters },
           { new: true }
         )
-          .then((updatedDocument) => {
-            console.log(updatedDocument);
-          })
-          .catch((error) => {
-            console.log(error);
-          });
+          .then((updatedDocument) => console.log('updatedDocument', updatedDocument))
+          .catch((error) => console.log(error));
       });
 
-      res.status(200).json({
-        data: response,
-      });
+      res.status(200).json({ data: response, });
 
     } else if (embedding_type == 1) {
       const splitter = new TokenTextSplitter({
@@ -212,7 +206,6 @@ exports.create = async (req, res) => {
       //   { pineconeIndex, namespace: result._id }
       // );
 
-
       await PineconeStore.fromDocuments(
         output,
         new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }),
@@ -223,16 +216,11 @@ exports.create = async (req, res) => {
         { characters_number: content.length },
         { new: true }
       )
-        .then((updatedDocument) => {
-          console.log('updatedDocument>>>>>>>>', updatedDocument);
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+        .then((updatedDocument) => console.log('updatedDocument>>>>>>>>', updatedDocument))
 
-      res.status(200).json({
-        data: response,
-      });
+        .catch((error) => console.log(error));
+
+      res.status(200).json({ data: response, });
 
       // try {
       //   const response = await PineconeStore.fromDocuments(
@@ -284,12 +272,9 @@ exports.upload = async (req, res) => {
     res.send({ message: "File uploaded successfully" });
 };
 
-exports.retrain = async (req, res) => { };
-
 exports.get = async (req, res) => {
   try {
     const chatbot_id = new ObjectId(req.params.chatbot_id);
-
     const setting = await BotSetting.findById(chatbot_id)
       .populate("model")
       .populate("visibility")
@@ -505,13 +490,12 @@ exports.delete_chatbot = async (req, res) => {
 exports.share_chatbot = async (req, res) => {
   try {
     const { chatbot_id, require_login } = req.body;
-    const visibility_list = await Visible.find();
+    console.log({ chatbot_id, require_login });
 
-    const public_id = visibility_list[visibility_list.length - 1]._id;
-    const setting = await Visible.updateOne(
-      { _id: new ObjectId(chatbot_id) },
-      { $set: { visibility: public_id, require_login: require_login } }
-    );
+    const visibility_list = await Visible.find();
+    const public_id = visibility_list[visibility_list?.length - 1]?._id;
+    const setting = await Visible.updateOne({ _id: new ObjectId(chatbot_id) }, { $set: { visibility: public_id, require_login: require_login } });
+
     return resMsg(res, 200, "success");
   } catch (err) {
     return resMsg(res, 500, "Server error");
@@ -719,8 +703,6 @@ const getSubURLs = (resultURLs, URL, url_count, limitcount, res, find_URL) => {
 
 exports.web_scraping_chatbot = async (req, res) => {
   try {
-
-
     const { linkList, is_create = true, chatbot_id, chatbot_name } = req.body;
 
     let vectorDoc = [];

@@ -8,20 +8,16 @@ const { PineconeClient } = require("@pinecone-database/pinecone");
 const { PineconeStore } = require("langchain/vectorstores/pinecone");
 const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
 const { OpenAI } = require("langchain/llms/openai");
-const {
-  ConversationalRetrievalQAChain,
-  LLMChain,
-  loadQAChain,
-  StuffDocumentsChain,
-} = require("langchain/chains");
+
+const { ConversationalRetrievalQAChain, LLMChain, loadQAChain, StuffDocumentsChain, } = require("langchain/chains");
 
 require("dotenv").config();
 
 exports.create = async (req, res) => {
   try {
+
     const userData = req.body;
     const now = new Date();
-
     const current_today = date.format(now, "YYYY-MM-DD");
 
     const year = now.getFullYear();
@@ -48,6 +44,7 @@ exports.create = async (req, res) => {
       apiKey: process.env.PINECONE_API_KEY,
       environment: process.env.PINECONE_ENVIRONMENT,
     });
+
     const pineconeIndex = client.Index(process.env.PINECONE_INDEX);
 
     const vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }), { pineconeIndex, namespace: userData.chatbot_id });
@@ -62,11 +59,10 @@ exports.create = async (req, res) => {
     let message = [];
     var rowletter;
 
-    const result = await chain
-      .call({
-        input_documents: results.map((item) => item.pageContent),
-        question: userData.message,
-      })
+    const result = await chain.call({
+      input_documents: results.map((item) => item.pageContent),
+      question: userData.message,
+    })
       .then((row) => {
         rowletter = row;
         message = [
@@ -75,11 +71,10 @@ exports.create = async (req, res) => {
         ];
       });
 
-    let doc = await ChatHistoryModel.updateOne(
-      {
-        chatbot_id: new ObjectId(userData.chatbot_id),
-        updatedAt: { $gte: limit_time },
-      },
+    console.log('vuserData.chatbot_id', userData.chatbot_id);
+
+
+    let doc = await ChatHistoryModel.updateOne({ chatbot_id: new ObjectId(userData.chatbot_id), updatedAt: { $gte: limit_time }, },
       {
         update_date: current_today,
         $push: {
