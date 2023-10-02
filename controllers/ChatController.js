@@ -104,6 +104,8 @@ exports.getDashboard = async (req, res) => {
   try {
     const { chatbot_id } = req.body;
 
+    console.log(req.body, 'chatbot_id??????');
+
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
