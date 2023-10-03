@@ -52,7 +52,7 @@ app.use(cookieParser());
 
 //To allow cross-origin requests
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:8080',],
+  origin: ['http://localhost:3000', 'http://localhost:8080', 'https://tonomyai.netlify.app', 'https://tonomy-ai-chatbot-api.vercel.app'],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
 
