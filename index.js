@@ -51,11 +51,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 //To allow cross-origin requests
-app.use(cors('*'));
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:8080',],
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+
+}));
+
+
 app.use(express.static(path.join(__dirname, "public")));
 
 //Route Prefixes
-app.use("/", indexRouter);
+// app.use("/", indexRouter);
 app.use("/api/", apiRouter);
 
 // app.use("/upload", (req, res) => {
