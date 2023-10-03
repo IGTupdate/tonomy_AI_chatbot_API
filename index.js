@@ -80,8 +80,12 @@ app.use("/api/", apiRouter);
 // });
 
 // throw 404 if URL not found
-app.all("*", function (req, res) {
-  return apiResponse.notFoundResponse(res, "Page not found");
+app.get("*", function (req, res) {
+  // return apiResponse.notFoundResponse(res, "Page not found");
+  res.status(400).send({
+    message: 'Hunnn Smart!',
+    error: true
+  })
 });
 
 app.use((err, req, res) => {
