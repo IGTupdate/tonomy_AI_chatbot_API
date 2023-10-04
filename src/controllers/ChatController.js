@@ -120,7 +120,7 @@ exports.getDashboard = async (req, res) => {
 
     const conversations = await ChatHistoryModel.find({
       update_date: { $gte: limit_day },
-      chatbot_id: new ObjectId(chatbot_id),
+      chatbot_id: chatbot_id,
     }).populate();
 
     let total_msg = 0;
