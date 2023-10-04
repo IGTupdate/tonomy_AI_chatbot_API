@@ -274,7 +274,7 @@ exports.upload = async (req, res) => {
 
 exports.get = async (req, res) => {
   try {
-    const chatbot_id = new ObjectId(req.params.chatbot_id);
+    const chatbot_id =req.params.chatbot_id
     const setting = await BotSetting.findById(chatbot_id)
       .populate("model")
       .populate("visibility")
@@ -323,7 +323,7 @@ exports.updateSetting = async (req, res) => {
   try {
     const { chatbot_id, sendData } = req.body;
 
-    const chatbotId = new ObjectId(chatbot_id);
+    const chatbotId = chatbot_id
 
     await BotSetting.updateOne({ _id: chatbotId }, { $set: req.body });
 
@@ -443,8 +443,8 @@ exports.update_embedded_visible = async (req, res) => {
     const { chatbot_id, visible } = req.body;
 
     const setting = await BotSetting.updateOne(
-      { _id: new ObjectId(chatbot_id) },
-      { $set: { visibility: new ObjectId(visible) } }
+      { _id: chatbot_id},
+      { $set: { visibility: visible } }
     );
     return resMsg(res, 200, setting);
   } catch (err) {
@@ -456,7 +456,7 @@ exports.update_embedded_domains = async (req, res) => {
   try {
     const { chatbot_id, domains } = req.body;
     const setting = await BotSetting.updateOne(
-      { _id: new ObjectId(chatbot_id) },
+      { _id: chatbot_id },
       { $set: { domain: domains } }
     );
     return resMsg(res, 200, setting);
@@ -494,7 +494,7 @@ exports.share_chatbot = async (req, res) => {
 
     const visibility_list = await Visible.find();
     const public_id = visibility_list[visibility_list?.length - 1]?._id;
-    const setting = await Visible.updateOne({ _id: new ObjectId(chatbot_id) }, { $set: { visibility: public_id, require_login: require_login } });
+    const setting = await Visible.updateOne({ _id: chatbot_id }, { $set: { visibility: public_id, require_login: require_login } });
 
     return resMsg(res, 200, "success");
   } catch (err) {
@@ -773,7 +773,7 @@ exports.web_scraping_chatbot = async (req, res) => {
       });
 
 
-      const user = await ChatbotHistory.create({ user_id: new ObjectId(user_id), chatbot_id: result._id, });
+      const user = await ChatbotHistory.create({ user_id: user_id, chatbot_id: result._id, });
       chatbotId = result._id;
     }
     else {
