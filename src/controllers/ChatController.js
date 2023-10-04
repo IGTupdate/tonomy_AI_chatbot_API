@@ -148,7 +148,7 @@ exports.getDashboard = async (req, res) => {
 
 exports.getChatHistory = async (req, res) => {
   try {
-    const id = new ObjectId(req.body.id);
+    const id = req.body.id
     const chatHistory = await ChatHistoryModel.findById(id);
     return resMsg(res, 200, chatHistory.message);
   } catch (err) {
