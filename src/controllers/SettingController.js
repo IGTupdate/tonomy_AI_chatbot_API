@@ -20,6 +20,7 @@ const puppeteer = require("puppeteer");
 const { SUCCESS, SERVERERROR, NOTFOUND, EMAILORPASSWORDINVAID, EXIST, } = require("../constants/errorCode");
 const { SUCCESSMSG, SERVERERRORMSG, NOTFOUNDMSG, EMAILORPASSWORDINVAIDMSG, EXISTMSG, } = require("../constants/errorMessage");
 const UserModel = require("../models/UserModel");
+const path = require("path");
 
 require("dotenv").config();
 
@@ -135,11 +136,13 @@ exports.create = async (req, res) => {
       const filename = file.name;
       let numberCharacters = 0;
 
-      await file.mv(`${newpath}${filename}`, async (err) => {
-        if (err) {
-          err_msg = "Upload Failed";
-        }
 
+      const srcDir = path.join(__dirname, '..'); // Absolute path to 'src' directory
+      const destinationPath = path.join(srcDir, filename); // Absolute path to the destination file
+
+      try {
+        await file.mv(destinationPath); // Use await with file.mv
+        console.log('File saved successfully');
         const loader = new PDFLoader("controllers/" + filename.toString(), {
           splitPages: false,
           pdfjs: () => import("pdf-parse/lib/pdf.js/v1.9.426/build/pdf.js"),
@@ -180,7 +183,15 @@ exports.create = async (req, res) => {
         )
           .then((updatedDocument) => console.log('updatedDocument', updatedDocument))
           .catch((error) => console.log(error));
-      });
+      // };
+      } catch (err) {
+        console.error('Error saving the file:', err);
+        // Handle the error appropriately
+      }
+
+
+
+
 
       res.status(200).json({ data: response, });
 
@@ -274,7 +285,7 @@ exports.upload = async (req, res) => {
 
 exports.get = async (req, res) => {
   try {
-    const chatbot_id =req.params.chatbot_id
+    const chatbot_id = req.params.chatbot_id
     const setting = await BotSetting.findById(chatbot_id)
       .populate("model")
       .populate("visibility")
@@ -443,7 +454,7 @@ exports.update_embedded_visible = async (req, res) => {
     const { chatbot_id, visible } = req.body;
 
     const setting = await BotSetting.updateOne(
-      { _id: chatbot_id},
+      { _id: chatbot_id },
       { $set: { visibility: visible } }
     );
     return resMsg(res, 200, setting);
@@ -579,6 +590,11 @@ exports.websrape = async (req, res) => {
     return resMsg(res, 500, "Server error");
   }
 };
+
+
+
+
+
 
 const check_repeat = (urls, sub_url) => {
   for (var i = 0; i < urls.length; i++) {
