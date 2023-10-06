@@ -49,10 +49,8 @@ exports.create = async (req, res) => {
 
     const vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }), { pineconeIndex, namespace: userData.chatbot_id });
 
-    const llm = new OpenAI({
-      openAIApiKey: process.env.OPENAI_API_KEY,
-      temperature: 0,
-    });
+    const llm = new OpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature: 0, });
+
     const results = await vectorStore.similaritySearch(userData.message, 5);
     const chain = loadQAChain(llm, { type: "stuff" });
 
@@ -93,29 +91,22 @@ exports.create = async (req, res) => {
 
     res.json(rowletter);
 
-    // return resMsg(res, 200, result);
   } catch (error) {
-    console.log(error);
-    return resMsg(res, 500, "Server error");
-  }
-};
+    return resMsg(res, 500, "Server error")
+  };
+}
 
 exports.getDashboard = async (req, res) => {
   try {
     const { chatbot_id } = req.body;
-
-    console.log(req.body, 'chatbot_id??????');
 
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
     const day = now.getDate();
 
-    const limit_date = new Date(
-      year,
-      month,
-      day - process.env.DASHBOARD_LIMIT_DAY
-    );
+    const limit_date = new Date(year, month, day - process.env.DASHBOARD_LIMIT_DAY);
+
     const limit_day = date.format(limit_date, "YYYY-MM-DD");
 
     const conversations = await ChatHistoryModel.find({
@@ -125,6 +116,7 @@ exports.getDashboard = async (req, res) => {
 
     let total_msg = 0;
     let conversation_list = [];
+
     for (const item of conversations) {
       total_msg += item.message.length;
       conversation_list.push({
@@ -134,14 +126,16 @@ exports.getDashboard = async (req, res) => {
         msgtime: item.update_date,
       });
     }
+
     const resData = {
       total_conversation: conversations.length,
       avg: total_msg / conversations.length,
       conversations: conversation_list,
     };
+    
     return resMsg(res, 200, resData);
+
   } catch (err) {
-    console.log(err);
     return resMsg(res, 500, "Server error");
   }
 };

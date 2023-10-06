@@ -13,13 +13,11 @@ const { PineconeClient } = require("@pinecone-database/pinecone");
 const { PineconeStore } = require("langchain/vectorstores/pinecone");
 const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
 const { PuppeteerWebBaseLoader, } = require("langchain/document_loaders/web/puppeteer");
-const { decode } = require("jsonwebtoken");
-const PDFParser = require("pdf-parse");
+
 const puppeteer = require("puppeteer");
 
-const { SUCCESS, SERVERERROR, NOTFOUND, EMAILORPASSWORDINVAID, EXIST, } = require("../constants/errorCode");
-const { SUCCESSMSG, SERVERERRORMSG, NOTFOUNDMSG, EMAILORPASSWORDINVAIDMSG, EXISTMSG, } = require("../constants/errorMessage");
-const UserModel = require("../models/UserModel");
+const { SUCCESS, SERVERERROR, } = require("../constants/errorCode");
+const { SERVERERRORMSG, } = require("../constants/errorMessage");
 const path = require("path");
 
 require("dotenv").config();
@@ -106,36 +104,25 @@ exports.create = async (req, res) => {
     let token = req.headers["x-auth-token"];
 
     if (!token) {
-      return res.status(403).send({
-        message: "No token provided!",
-      });
+      return res.status(403).send({ message: "No token provided!" });
     }
 
     jwt.verify(token, process.env.token_key, (err, decoded) => {
       if (err) {
-        return res.status(401).status({
-          message: "Unauthorized!",
-        });
+        return res.status(401).status({ message: "Unauthorized!", });
       }
       user_id = decoded.id;
     });
 
     if (is_create) {
-      const user = await ChatbotHistory.create({
-        user_id: new ObjectId(user_id),
-        chatbot_id: result._id,
-      });
+      const user = await ChatbotHistory.create({ user_id: new ObjectId(user_id), chatbot_id: result._id, })
     }
 
     if (embedding_type == 0) {
-      // let vectorDoc = [];
       //********file upload **********/
-      const newpath = __dirname + "/";
-
       const file = req.files.file;
       const filename = file.name;
       let numberCharacters = 0;
-
 
       const srcDir = path.join(__dirname, '..'); // Absolute path to 'src' directory
       const destinationPath = path.join(srcDir, filename); // Absolute path to the destination file
@@ -151,15 +138,10 @@ exports.create = async (req, res) => {
         const docs = await loader.load();
 
         fs.unlink("controllers/" + filename.toString(), (err) => {
-          if (err) {
-            throw err;
-          }
+          if (err) throw err
         });
 
-        const splitter = new TokenTextSplitter({
-          chunkSize: 1000,
-          chunkOverlap: 0,
-        });
+        const splitter = new TokenTextSplitter({ chunkSize: 1000, chunkOverlap: 0, });
 
         const output = await splitter.createDocuments([docs[0].pageContent]);
         numberCharacters = docs[0].pageContent.length;
@@ -176,39 +158,26 @@ exports.create = async (req, res) => {
 
         await PineconeStore.fromDocuments(output, new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }), { pineconeIndex, namespace: result._id });
 
-        BotSetting.findByIdAndUpdate(
-          result._id,
+        BotSetting.findByIdAndUpdate(result._id,
           { characters_number: numberCharacters },
           { new: true }
         )
           .then((updatedDocument) => console.log('updatedDocument', updatedDocument))
           .catch((error) => console.log(error));
-      // };
       } catch (err) {
-        console.error('Error saving the file:', err);
         // Handle the error appropriately
+        console.error('Error saving the file:', err);
       }
-
-
-
-
 
       res.status(200).json({ data: response, });
 
     } else if (embedding_type == 1) {
-      const splitter = new TokenTextSplitter({
-        chunkSize: 1000,
-        chunkOverlap: 0,
-      });
+      const splitter = new TokenTextSplitter({ chunkSize: 1000, chunkOverlap: 0 });
 
       let output = await splitter.createDocuments([content]);
 
       const client = new PineconeClient();
-
-      await client.init({
-        apiKey: process.env.PINECONE_API_KEY,
-        environment: process.env.PINECONE_ENVIRONMENT,
-      });
+      await client.init({ apiKey: process.env.PINECONE_API_KEY, environment: process.env.PINECONE_ENVIRONMENT });
 
       const pineconeIndex = client.Index(process.env.PINECONE_INDEX);
       // await PineconeStore.fromDocuments(
@@ -217,18 +186,12 @@ exports.create = async (req, res) => {
       //   { pineconeIndex, namespace: result._id }
       // );
 
-      await PineconeStore.fromDocuments(
-        output,
+      await PineconeStore.fromDocuments(output,
         new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }),
         { pineconeIndex, namespace: result._id }
       )
-      BotSetting.findByIdAndUpdate(
-        result._id,
-        { characters_number: content.length },
-        { new: true }
-      )
+      BotSetting.findByIdAndUpdate(result._id, { characters_number: content.length }, { new: true })
         .then((updatedDocument) => console.log('updatedDocument>>>>>>>>', updatedDocument))
-
         .catch((error) => console.log(error));
 
       res.status(200).json({ data: response, });
@@ -263,19 +226,13 @@ exports.create = async (req, res) => {
     }
 
   } catch (error) {
-    console.log('error>>>>>>', error);
-    return res.status(400).json({
-      status: "error",
-      error: error,
-    });
+    return res.status(400).json({ status: "error", error: error, });
   }
 };
 
 exports.upload = async (req, res) => {
   if (!req.files.length) {
-    res.status(400).send({
-      message: "Content can not be empty!",
-    });
+    res.status(400).send({ message: "Content can not be empty!" });
     return;
   }
 
@@ -310,9 +267,7 @@ exports.get = async (req, res) => {
 exports.iconUpload = async (req, res) => {
   try {
     const Icon = req.files.Icon;
-
     const newPath = "./public/";
-    console.log(newPath);
 
     const IconName = Icon.name;
     await Icon.mv(`${newPath}${IconName}`, async (err) => {
@@ -333,13 +288,11 @@ exports.iconUpload = async (req, res) => {
 exports.updateSetting = async (req, res) => {
   try {
     const { chatbot_id, sendData } = req.body;
-
     const chatbotId = chatbot_id
 
     await BotSetting.updateOne({ _id: chatbotId }, { $set: req.body });
 
     return resMsg(res, 200, "success");
-
   } catch (err) {
 
     console.log(err);
@@ -357,16 +310,14 @@ exports.replaceData = async (req, res) => {
 
       for (var i = 0; i < req.files.length; i++) {
         reqFiles.push(url + "/public/" + req.files[i].filename);
+
         const loader = new PDFLoader("public/" + req.files[i].filename, {
           splitPages: false,
           pdfjs: () => import("pdf-parse/lib/pdf.js/v1.9.426/build/pdf.js"),
         });
         const docs = await loader.load();
 
-        const splitter = new TokenTextSplitter({
-          chunkSize: 1000,
-          chunkOverlap: 0,
-        });
+        const splitter = new TokenTextSplitter({ chunkSize: 1000, chunkOverlap: 0 });
 
         const output = await splitter.createDocuments([docs[0].pageContent]);
         vectorDoc = vectorDoc.concat(output);
@@ -413,7 +364,6 @@ exports.getChatList = async (req, res) => {
         });
       }
       user_id = decoded.id;
-      console.log(user_id, 'user_id>>>>>>>>>>');
     });
 
     ChatbotHistory.find({ user_id: user_id })
@@ -479,9 +429,6 @@ exports.update_embedded_domains = async (req, res) => {
 exports.delete_chatbot = async (req, res) => {
   try {
     const { chatbot_id } = req.body;
-    // const id = new ObjectId(chatbot_id);
-    console.log(chatbot_id);
-
     const result = await ChatbotHistory.deleteOne({ chatbot_id: chatbot_id });
     await BotSetting.deleteOne({ _id: chatbot_id });
     // const client = new PineconeClient();
@@ -491,7 +438,6 @@ exports.delete_chatbot = async (req, res) => {
     // });
     // const pineconeIndex = client.Index(process.env.PINECONE_INDEX);
     // await pineconeIndex.delete1({ deleteAll: true, namespace: chatbot_id });
-
     return resMsg(res, 200, "success");
   } catch (err) {
     return resMsg(res, 500, "Server error");
@@ -592,10 +538,6 @@ exports.websrape = async (req, res) => {
 };
 
 
-
-
-
-
 const check_repeat = (urls, sub_url) => {
   for (var i = 0; i < urls.length; i++) {
     if (urls[i] === sub_url) return true;
@@ -629,10 +571,8 @@ const getSubURLs = (resultURLs, URL, url_count, limitcount, res, find_URL) => {
 
         await page.goto(URL);
 
-        console.log(check_url);
-        console.log("jagui>>>>>>>:" + URL);
-
         check_url.push(URL);
+
         let subURLs = await page.evaluate(() => {
           // Select all elements with crayons-tag class
           let results = [];
@@ -655,18 +595,13 @@ const getSubURLs = (resultURLs, URL, url_count, limitcount, res, find_URL) => {
           );
 
           all_resultURLs = resultURLs;
-          console.log(resultURLs);
           url_count = resultURLs.length;
-
-          console.log('KKKKKKKKKKKK', check_url.length + ":" + resultURLs.length);
 
           if (check_url.length === resultURLs.length) {
             console.log("success");
             resolve(resultURLs);
             return resMsg(res, 200, resultURLs);
           }
-
-          console.log("restart");
 
           if (resultURLs.length > limitcount) {
             console.log("the count is many");
@@ -684,19 +619,15 @@ const getSubURLs = (resultURLs, URL, url_count, limitcount, res, find_URL) => {
 
         else {
           if (check_url[check_url.length - 1] === resultURLs[resultURLs.length - 1]) {
-
             resolve(resultURLs);
             return resMsg(res, 200, resultURLs);
           }
-
-          console.log('VVVVVVVVVVVVVVVVVVVVVVVVVVVVVV>>>>>>>>>', check_url.length + ":" + resultURLs.length);
 
           for (var i = 0; i < resultURLs.length; i++)
 
             if (check_repeat(check_url, resultURLs[i]) === false && resultURLs.length < limitcount) {
 
               await getSubURLs(resultURLs, resultURLs[i], url_count, limitcount, res, find_URL);
-
             }
         }
       }
@@ -704,9 +635,6 @@ const getSubURLs = (resultURLs, URL, url_count, limitcount, res, find_URL) => {
       await browser.close();
     }
     catch (err) {
-
-      console.log("in jague", err);
-
       if (resultURLs.length > 0) {
         resolve(resultURLs);
         resMsg(res, 200, resultURLs);
@@ -766,9 +694,7 @@ exports.web_scraping_chatbot = async (req, res) => {
         saveData.theme = theme[0]._id;
       }
 
-
       const result = await BotSetting.create(saveData);
-
 
       let user_id = "";
       let token = req.headers["x-auth-token"];
@@ -788,13 +714,10 @@ exports.web_scraping_chatbot = async (req, res) => {
         user_id = decoded.id;
       });
 
-
       const user = await ChatbotHistory.create({ user_id: user_id, chatbot_id: result._id, });
       chatbotId = result._id;
     }
-    else {
-      chatbotId = chatbot_id;
-    }
+    else { chatbotId = chatbot_id }
 
     for (let index = 0; index < linkList.length; index++) {
       const element = linkList[index];
@@ -807,10 +730,7 @@ exports.web_scraping_chatbot = async (req, res) => {
       });
 
       const output = await splitter.createDocuments([docs[0].pageContent]);
-
       vectorDoc = vectorDoc.concat(output);
-
-
     }
 
     const client = new PineconeClient();
@@ -820,15 +740,10 @@ exports.web_scraping_chatbot = async (req, res) => {
       environment: process.env.PINECONE_ENVIRONMENT,
     });
 
-
-
     const pineconeIndex = client.Index(process.env.PINECONE_INDEX);
-    console.log(' user>>>????????????????', pineconeIndex);
-
     await PineconeStore.fromDocuments(vectorDoc, new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }), { pineconeIndex, namespace: chatbotId });
     return resMsg(res, 200, "Success");
   } catch (err) {
-    console.log('err>>>>>>>>>>err:------>', err);
     return resMsg(res, 500, "Server error");
   }
-};
+}

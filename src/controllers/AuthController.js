@@ -2,20 +2,8 @@ const User = require("../models/UserModel");
 
 const jwt = require("jsonwebtoken");
 
-const {
-  SUCCESS,
-  SERVERERROR,
-  NOTFOUND,
-  EMAILORPASSWORDINVAID,
-  EXIST,
-} = require("../constants/errorCode");
-const {
-  SUCCESSMSG,
-  SERVERERRORMSG,
-  NOTFOUNDMSG,
-  EMAILORPASSWORDINVAIDMSG,
-  EXISTMSG,
-} = require("../constants/errorMessage");
+const { SUCCESS, SERVERERROR } = require("../constants/errorCode");
+const { SERVERERRORMSG } = require("../constants/errorMessage");
 require("dotenv").config();
 
 exports.signIn = async (req, res) => {
@@ -36,9 +24,7 @@ exports.signIn = async (req, res) => {
         isActive: true,
       });
     }
-    const token = jwt.sign({ id: user._id }, process.env.token_key, {
-      expiresIn: 86400,
-    });
+    const token = jwt.sign({ id: user._id }, process.env.token_key, { expiresIn: 86400, });
     return res.status(SUCCESS).json({ user: user, token: token });
   } catch (error) {
     return res.status(SERVERERROR).json({ message: SERVERERRORMSG });
