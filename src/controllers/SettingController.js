@@ -124,20 +124,23 @@ exports.create = async (req, res) => {
       const filename = file.name;
       let numberCharacters = 0;
 
-      const srcDir = path.join(__dirname, '..'); // Absolute path to 'src' directory
-      const destinationPath = path.join(srcDir, filename); // Absolute path to the destination file
+      const srcDir = path.join(__dirname, '..')
+      const destinationPath = path.join(`${srcDir}/uploads`, filename);
 
       try {
         await file.mv(destinationPath); // Use await with file.mv
+
         console.log('File saved successfully');
-        const loader = new PDFLoader("controllers/" + filename.toString(), {
+
+        const loader = new PDFLoader(destinationPath, {
           splitPages: false,
           pdfjs: () => import("pdf-parse/lib/pdf.js/v1.9.426/build/pdf.js"),
         });
 
         const docs = await loader.load();
+        console.log('docs>>>>>>>>>>', docs);
 
-        fs.unlink("controllers/" + filename.toString(), (err) => {
+        fs.unlink(destinationPath, (err) => {
           if (err) throw err
         });
 
@@ -155,17 +158,14 @@ exports.create = async (req, res) => {
         });
 
         const pineconeIndex = client.Index(process.env.PINECONE_INDEX);
-
         await PineconeStore.fromDocuments(output, new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }), { pineconeIndex, namespace: result._id });
-
         BotSetting.findByIdAndUpdate(result._id,
           { characters_number: numberCharacters },
           { new: true }
         )
-          .then((updatedDocument) => console.log('updatedDocument', updatedDocument))
-          .catch((error) => console.log(error));
+          .then((updatedDocument) => console.log('updatedDocument0000', updatedDocument))
+          .catch((error) => console.log('error>>:error>>', error));
       } catch (err) {
-        // Handle the error appropriately
         console.error('Error saving the file:', err);
       }
 

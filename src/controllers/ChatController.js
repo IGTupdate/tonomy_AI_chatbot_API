@@ -9,13 +9,12 @@ const { PineconeStore } = require("langchain/vectorstores/pinecone");
 const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
 const { OpenAI } = require("langchain/llms/openai");
 
-const { ConversationalRetrievalQAChain, LLMChain, loadQAChain, StuffDocumentsChain, } = require("langchain/chains");
+const { ConversationalRetrievalQAChain, LLMChain, loadQAChain, StuffDocumentsChain, VectorDBQAChain, } = require("langchain/chains");
 
 require("dotenv").config();
 
 exports.create = async (req, res) => {
   try {
-
     const userData = req.body;
     const now = new Date();
     const current_today = date.format(now, "YYYY-MM-DD");
@@ -50,34 +49,43 @@ exports.create = async (req, res) => {
     const vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY }), { pineconeIndex, namespace: userData.chatbot_id });
 
     const llm = new OpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature: 0, });
-
     const results = await vectorStore.similaritySearch(userData.message, 5);
-    const chain = loadQAChain(llm, { type: "stuff" });
 
-    let message = [];
-    var rowletter;
-
-    const result = await chain.call({
-      input_documents: results.map((item) => item.pageContent),
-      question: userData.message,
+    const chain = VectorDBQAChain.fromLLM(llm, vectorStore, {
+      k: 1,
+      returnSourceDocuments: true,
+    });
+    const response = await chain.call({ query: userData.message }).then((row) => {
+      rowletter = row;
+      message = [{ role: "user", content: userData.message }, { role: "assistant", content: row.text },];
     })
-      .then((row) => {
-        rowletter = row;
-        message = [
-          { role: "user", content: userData.message },
-          { role: "assistant", content: row.text },
-        ];
-      });
+      .catch((error) => console.error('Error processing result:', error))
 
-    console.log('vuserData.chatbot_id', userData.chatbot_id);
+    // const chain = loadQAChain(llm, { type: "stuff" });
+    // let message = [];
+    // let rowletter;
 
+    // for (const result of results) {
+    //   try {
+    //     await chain.call({
+    //       input_documents: [result.pageContent],
+    //       question: userData.message,
+    //     })
+    //       .then((row) => {
+    //         rowletter = row;
+    //         message = [{ role: "user", content: userData.message }, { role: "assistant", content: row.text },];
+    //       })
+    //       .catch((error) => console.error('Error processing result:', error))
+
+    //   } catch (error) {
+    //     console.error('Error processing result:', error);
+    //   }
+    // }
 
     let doc = await ChatHistoryModel.updateOne({ chatbot_id: new ObjectId(userData.chatbot_id), updatedAt: { $gte: limit_time }, },
       {
         update_date: current_today,
-        $push: {
-          message: message,
-        },
+        $push: { message: message, },
       }
     );
 
@@ -90,7 +98,6 @@ exports.create = async (req, res) => {
     }
 
     res.json(rowletter);
-
   } catch (error) {
     return resMsg(res, 500, "Server error")
   };
@@ -132,7 +139,7 @@ exports.getDashboard = async (req, res) => {
       avg: total_msg / conversations.length,
       conversations: conversation_list,
     };
-    
+
     return resMsg(res, 200, resData);
 
   } catch (err) {
